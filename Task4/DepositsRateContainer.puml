@@ -1,0 +1,63 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+skinparam {
+    shadowing true
+    wrapWidth 200
+}
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+
+title MVP "Открытие Депозита в Интернет-Банке"
+
+Person(Customer, "Клиент (новый клиент)")
+Person(Staff_Call_Center, "Сотрудник Кол-центра")
+Person(Staff_Partner_Call_Center, "Сотрудник партнерского кол-центра")
+
+System_Boundary(Banking, "Интернет-Банк") {
+    System_Boundary(RemoteBanking, "Каналы взаимодействия с клиентом") {
+        Container(WebPage, "Сайт", "PHP + React.js")
+    }
+
+    Container(ApiGateway, "API Gateway", "", "Точка входа для сайта и интернет-банка, TLS-терминация, маршрутизация, Rate Limiter")
+
+    System_Boundary(Deposits, "Накопительные продукты") {
+        Container(SavingApi, "SavingApi", "Java", "Сервис накопительных продуктов \n 1) Модуль заявок \n 2) Модуль ставок ")
+        Container(RateDaemon, "SavingRateDaemon", "Java", "Демон для выгрузки ставок")
+        ContainerDb(SavingDb, "SavingDb", "Postgres")
+    }
+
+}
+
+System_Boundary(Abs, "АБС") {
+    Container(AbsConnector, "AbsConnector", "Java", "Банк-коннектор. Сервис для интеграции с АБС")
+    ContainerDb(AbsDb, "Oracle", "Oracle", "База данных и логика на PL-SQL ")
+}
+
+System(CRM, "Кол-центр", "Клиент-серверная система на платформе подрядчика")
+
+System_Boundary(Partner_Call_Center, "Партнерский кол-центр") {
+    Container_Ext(SFTP, "SFTP", "SFTP-сервер", "SFTP-сервер в контуре партнерского кол-центра")
+    System_Ext(PartnerCallCenter, "Партнерский кол-центр")
+}
+
+Lay_D(RemoteBanking, SavingApi)
+
+Rel(Customer, WebPage, "Просмотр ставок и отправка заявки")
+Rel(WebPage, ApiGateway, "1) Предоставление ставок \n 2) Формирование заявки", "HTTPS/TLS")
+Rel(ApiGateway, SavingApi, "Запросы", "HTTP")
+Rel(CRM, ApiGateway, "Получение актуальных ставок", "HTTP")
+Rel(Staff_Call_Center, CRM, "Просмотр ставок")
+Rel(Staff_Partner_Call_Center, PartnerCallCenter, "Просмотр ставок")
+Rel(PartnerCallCenter, SFTP, "Периодическая выгрузка актуальных ставок", "SFTP")
+Rel_R(RateDaemon, SFTP, "Периодическая выгрузка актуальных ставок", "SFTP")
+Rel_R(SavingApi, SavingDb, "Read\Write", "JDBC")
+Rel_L(RateDaemon, SavingDb, "Read\Write", "JDBC")
+
+Rel_R(AbsConnector, AbsDb, "Read\Write \n в таблицы \n ABS_INBOX и ABS_OUTBOX", "JDBC")
+
+Rel_D(SavingApi, AbsConnector, "Получения актуальных и персонализированных ставок", "Kafka")
+
+Lay_R(SavingApi, SavingDb)
+@enduml

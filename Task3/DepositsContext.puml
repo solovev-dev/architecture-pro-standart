@@ -1,0 +1,28 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+
+skinparam {
+    shadowing true
+    wrapWidth 200
+}
+
+title MVP "Открытие Депозита в Интернет-Банке"
+
+Person(Customer, "Клиент", "ФЛ \n(Клиент банка)")
+Person(Staff_Deposit, "Сотрудник \nбэк-офиса", "Сотрудник отдела депозитов")
+Person(Staff_Credit, "Сотрудник \nбэк-офиса", "Сотрудник отдела  кредитов")
+
+System(RemoteBanking, "Интернет-банк", "Набор сервисов для ДБО")
+System(Abs, "АБС", "Автоматизированная банковская система")
+System_Ext(CB, "ЦБ", "Центральный Банк")
+
+Rel_D(Customer, RemoteBanking, "1) Просмотр ставок\n 2) Отправка заявок в Банк \n", "HTTPS")
+Rel_D(RemoteBanking, Abs, "1) Отправка заявки\n 2) Получение актуальных ставок\n 3)Получение статуса по заявке")
+Rel_D(Abs, CB, "Получение процентных ставок ЦБ")
+Rel_L(Staff_Deposit, Abs, "Обработка заявок\n на депозит")
+Rel_R(Staff_Credit, Abs, "Согласование \nспециальной ставки")
+
+@enduml
