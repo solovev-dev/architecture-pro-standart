@@ -1,0 +1,32 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+
+skinparam {
+    shadowing true
+    wrapWidth 200
+}
+
+title "Передача ставок по депозитам в кол-центр"
+
+Person(NewCustomer, "Клиент", "Новый клиент")
+Person(Staff_Call_Center, "Сотрудник Кол-центра")
+Person(Staff_Partner_Call_Center, "Сотрудник партнерского кол-центра")
+
+System(RemoteBanking, "Интернет-банк", "Набор сервисов для ДБО")
+System(Abs, "АБС", "Автоматизированная банковская система")
+System(Call_Center, "Система кол-центра", "Внутренняя система для обработки обращений (Java / Spring Boot)")
+System_Ext(Partner_Call_Center, "Система партнерского кол-центра", "Внешняя система партнера")
+
+Rel_R(Abs, RemoteBanking, "Передает актуальные ставки")
+Rel_U(RemoteBanking, Partner_Call_Center, "Передает актуальные ставки")
+Rel_U(RemoteBanking, Call_Center, "Передает актуальные ставки")
+Rel_R(Staff_Call_Center, Call_Center, "Обработка звонов и\n просмотр актуальных ставок")
+Rel(Staff_Partner_Call_Center, Partner_Call_Center, "Обработка звонов и\n просмотр актуальных ставок")
+
+Rel(NewCustomer, Call_Center, "Обращение с вопросами по актуальным ставкам")
+Rel(NewCustomer, Partner_Call_Center, "Обращение с вопросами по актуальным ставкам")
+
+@enduml

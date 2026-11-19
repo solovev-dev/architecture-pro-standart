@@ -1,0 +1,38 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+
+skinparam {
+    shadowing true
+    wrapWidth 200
+}
+
+title "Заявка на Кредит в Интернет-Банке"
+
+Person(Customer, "Клиент", "ФЛ \n(Клиент банка)")
+Person(NewCustomer, "Новый Клиент", "Потенциальный клиент Банка")
+Person(Staff_Credit, "Сотрудник \nбэк-офиса", "Сотрудник отдела  кредитов")
+Person(Staff_Credit_Front, "Сотрудник \nфронт-офиса", "Сотрудник отделения Банка")
+
+System(RemoteBanking, "Интернет-банк", "Набор сервисов для ДБО")
+System(Site, "Сайт", "Сайт Банка")
+System(Abs, "АБС", "Автоматизированная банковская система")
+System(CreditConveyor, "Кредитный конвейер", "BPM-система обработки заявок")
+System_Ext(Scoring, "Система кредитного скоринга", "ML-система оценки рисков")
+System_Ext(BKI, "Бюро кредитных историй", "Внешний источник кредитных данных")
+
+Rel_D(Customer, RemoteBanking, "1) Просмотр актуальных кредитов\n 2)Просмотр предодобренных предложений \n 3) Отправка заявок в Банк")
+Rel_D(NewCustomer, Site, "1) Просмотр актуальных кредитов\n2) Отправка заявок в Банк \n")
+Rel_D(Site, RemoteBanking, "Формирование заявки")
+Rel_R(RemoteBanking, Abs, "Передача заявки")
+Rel_L(RemoteBanking, Scoring, "Проверка клиента")
+Rel_U(CreditConveyor, Scoring, "Проверка клиента")
+Rel(RemoteBanking, CreditConveyor, "Передача заявки")
+Rel_U(Scoring, Abs, "История по клиенту")
+Rel_R(Scoring, BKI, "Проверка по клиенту")
+Rel_U(Staff_Credit, CreditConveyor, "Обработка заявок\n на кредит")
+Rel(Staff_Credit_Front, Abs, "Создание заявки на кредит")
+
+@enduml

@@ -1,0 +1,80 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+skinparam {
+    shadowing true
+    wrapWidth 200
+}
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+
+title MVP "Открытие Депозита в Интернет-Банке"
+
+Person(Customer, "Клиент ФЛ")
+Person(Staff_Deposit, "Сотрудник \nбэк-офиса", "Сотрудник отдела депозитов")
+Person(Staff_Credit, "Сотрудник \nбэк-офиса", "Сотрудник отдела  кредитов")
+
+System_Ext(TelecomOperator, "Телеком оператор")
+
+System_Boundary(Banking, "Интернет-Банк") {
+    System_Boundary(RemoteBanking, "Каналы взаимодействия с клиентом") {
+        Container(WebPage, "Сайт", "PHP + React.js")
+        Container(RemoteBankingApi, "Интернет-банк (монолит)", "ASP.NET")
+        ContainerDb(RemoteBankingDb, "БД монолит", "MS SQL")
+    }
+
+    Container(ApiGateway, "API Gateway", "", "Точка входа для сайта и интернет-банка, TLS-терминация, маршрутизация, Rate Limiter")
+
+    System_Boundary(Deposits, "Накопительные продукты") {
+        Container(SavingApi, "SavingApi", "Java", "Сервис накопительных продуктов \n 1) Модуль заявок \n 2) Модуль ставок ")
+        ContainerDb(SavingDb, "SavingDb", "Postgres")
+    }
+
+    System_Boundary(Notification, "Уведомления") {
+         Container(NotificationService, "NotificationService", "Java", "Сервис уведомлений")
+         ContainerDb(NotificationDb, "NotificationDb", "Postgres")
+         Container_Ext(SmsProvider, "СМС Шлюз", "Java", "СМС-шлюз телеком-оператора")
+    }
+
+    System_Boundary(Signing, "Подтверждение операций") {
+         Container(ConfirmationService, "ConfirmationService", "Java", "Сервис подписания \n и подтверждения операций")
+         ContainerDb(ConfirmationDb, "ConfirmationDb", "Postgres")
+    }
+
+}
+
+System_Boundary(Abs, "АБС") {
+    Container(AbsConnector, "AbsConnector", "Java", "Банк-коннектор. Сервис для интеграции с АБС")
+    Container(AbsUI, "AbsUI", "Delphi", "Десктопный клиент. Предоставляет Бэк-офис депозитов")
+    ContainerDb(AbsDb, "Oracle", "Oracle", "База данных и логика на PL-SQL ")
+}
+
+Lay_D(RemoteBanking, SavingApi)
+
+Rel(Customer, RemoteBankingApi, "Просмотр ставок и отправка заявки")
+Rel(Customer, WebPage, "Просмотр ставок и отправка заявки")
+Rel(RemoteBankingApi, SavingApi, "Запросы внутри доверенной сети", "HTTP")
+Rel_L(RemoteBankingApi, RemoteBankingDb, "Read\Write", "JDBC")
+Rel(WebPage, ApiGateway, "1) Предоставление ставок \n 2) Формирование заявки", "HTTPS/TLS")
+Rel(ApiGateway, SavingApi, "Запросы", "HTTP")
+Rel(SavingApi, SavingDb, "Read\Write", "JDBC")
+
+Rel_R(SavingApi, ConfirmationService, "Подписания\n подтверждения", "HTTP")
+Rel_R(ConfirmationService, NotificationService, "Отправка \nуведомлений", "Kafka")
+Rel(SavingApi, NotificationService, "Отправка \nуведомлений", "Kafka")
+Rel(ConfirmationService, ConfirmationDb, "Read\Write", "JDBC")
+Rel(NotificationService, NotificationDb, "Read\Write", "JDBC")
+
+Rel(NotificationService, SmsProvider, "Отправка СМС", "HTTP")
+Rel_R(SmsProvider, TelecomOperator, "Отправка СМС", "SMPP")
+
+Rel(AbsUI, AbsDb, "Read\Write", "JDBC")
+Rel_R(AbsConnector, AbsDb, "Read\Write \n в таблицы \n ABS_INBOX и ABS_OUTBOX", "JDBC")
+Rel(Staff_Deposit, AbsUI, "Работа с заявками")
+Rel(Staff_Credit, AbsUI, "Работа с заявками")
+
+Rel(SavingApi, AbsConnector, "Отправка подтвержденных заявок в АБС", "Kafka")
+Rel(AbsConnector, SavingApi, "1) Получение статуса по заявкам\n 2) Получения актуальных и персонализированных ставок", "Kafka")
+
+@enduml
