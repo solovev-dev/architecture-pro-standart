@@ -1,0 +1,100 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+skinparam {
+    shadowing true
+    wrapWidth 200
+}
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+
+title MVP "Заявка на Кредит"
+
+Person(Customer, "Клиент ФЛ")
+Person(NewCustomer, "Новый клиент")
+Person(Staff_Credit_Back, "Сотрудник \nбэк-офиса", "Сотрудник отдела кредитов")
+Person(Staff_Credit_Front, "Сотрудник \nфронт-офиса", "Сотрудник отдела кредитов")
+
+System_Ext(TelecomOperator, "Телеком оператор")
+
+System_Boundary(Banking, "Интернет-Банк") {
+    System_Boundary(RemoteBanking, "Каналы взаимодействия с клиентом") {
+        Container(WebPage, "Сайт", "PHP + React.js")
+        Container(RemoteBankingApi, "Интернет-банк (монолит)", "ASP.NET")
+        ContainerDb(RemoteBankingDb, "БД монолит", "MS SQL")
+    }
+
+    Container(ApiGateway, "API Gateway", "", "Точка входа для сайта и интернет-банка, TLS-терминация, маршрутизация, Rate Limiter")
+
+    System_Boundary(Deposits, "Кредитные продукты") {
+        Container(CreditApi, "CreditApi", "Java", "Сервис кредитных продуктов \n 1) Модуль заявок \n 2) Модуль предодобренных предложений")
+        ContainerDb(CreditDb, "CreditDb", "Postgres")
+    }
+
+    System_Boundary(Notification, "Уведомления") {
+         Container(NotificationService, "NotificationService", "Java", "Сервис уведомлений")
+         ContainerDb(NotificationDb, "NotificationDb", "Postgres")
+         Container_Ext(SmsProvider, "СМС Шлюз", "Java", "СМС-шлюз телеком-оператора")
+    }
+
+    System_Boundary(Signing, "Подтверждение операций") {
+         Container(ConfirmationService, "ConfirmationService", "Java", "Сервис подписания \n и подтверждения операций")
+         ContainerDb(ConfirmationDb, "ConfirmationDb", "Postgres")
+    }
+
+}
+
+System_Boundary(Abs, "АБС") {
+    Container(AbsConnector, "AbsConnector", "Java", "Банк-коннектор. Сервис для интеграции с АБС")
+    Container(CreditConveyor, "CreditConveyor", "Camunda", "Коробочное решение на базе BPM-системы Camunda")
+    Container(AbsUI, "AbsUI", "Delphi", "Десктопный клиент. Предоставляет Бэк-офис кредитов")
+    ContainerDb(AbsDb, "Oracle", "Oracle", "База данных и логика на PL-SQL ")
+}
+
+Container(Scoring, "Система кредитного скоринга", "Python/Flask", "ML-система оценки рисков")
+
+System_Ext(BKI, "Бюро кредитных историй", "Внешний источник кредитных данных")
+
+Lay_D(RemoteBanking, CreditApi)
+
+Rel(Customer, RemoteBankingApi, "Просмотр предодобренных предложений и отправка заявки")
+Rel(NewCustomer, WebPage, "Просмотр условий и отправка заявки")
+Rel(RemoteBankingApi, CreditApi, "Запросы внутри доверенной сети", "HTTP")
+Rel_L(RemoteBankingApi, RemoteBankingDb, "Read\Write", "JDBC")
+Rel(WebPage, ApiGateway, "Просмотр условий и отправка заявки", "HTTPS/TLS")
+Rel(ApiGateway, CreditApi, "Запросы", "HTTP")
+Rel(CreditApi, CreditDb, "Read\Write", "JDBC")
+
+Rel_R(CreditApi, ConfirmationService, "Подписания\n подтверждения", "HTTP")
+Rel_R(ConfirmationService, NotificationService, "Отправка \nуведомлений", "Kafka")
+Rel(CreditApi, NotificationService, "Отправка \nуведомлений", "Kafka")
+Rel(ConfirmationService, ConfirmationDb, "Read\Write", "JDBC")
+Rel(NotificationService, NotificationDb, "Read\Write", "JDBC")
+
+Rel(NotificationService, SmsProvider, "Отправка СМС", "HTTP")
+Rel_R(SmsProvider, TelecomOperator, "Отправка СМС", "SMPP")
+
+Rel(AbsUI, AbsDb, "Read\Write", "JDBC")
+Rel_R(AbsConnector, AbsDb, "Read\Write \n в таблицы \n ABS_INBOX и ABS_OUTBOX", "JDBC")
+Rel(Staff_Credit_Front, AbsUI, "Работа с заявками")
+Rel(Staff_Credit_Back, CreditConveyor, "Работа с заявками")
+
+Rel(CreditApi, AbsConnector, "Отправка заявок в АБС", "Kafka")
+Rel(AbsConnector, CreditApi, "Получение статуса по заявкам", "Kafka")
+
+Lay_L(Staff_Credit_Front, Staff_Credit_Back)
+Lay_R(AbsUI, CreditConveyor)
+
+Rel_R(CreditApi, CreditConveyor, "Отправка заявок", "HTTP")
+Rel_L(CreditConveyor, CreditApi, "Результат обработки заявки", "Kafka")
+
+Rel_U(CreditApi, Scoring, "Синхронная проверка нового клиента", "HTTP")
+
+Rel_D(Scoring, CreditApi, "Результаты проверки по клиентам", "Kafka")
+Rel_U(Scoring, BKI, "Синхронная проверка клиента", "HTTP")
+
+
+
+
+@enduml

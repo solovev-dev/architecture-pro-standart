@@ -38,12 +38,12 @@
 #### Контекстная диаграмма
 <img src="./DepositsRateContext.png" alt="C4_Context" width="600">
 
-[C4_Context](./DepositsContainer.puml)
+[C4_Context](./DepositsRateContext.puml)
 
 #### Диаграмма контейнеров
-<img src="DepositsRateContainer.png" alt="C4_Container" width="600">
+<img src="./DepositsRateContainer.png" alt="C4_Container" width="600">
 
-[C4_Container](./DepositsContainer.puml)
+[C4_Container](./DepositsRateContainer.puml)
 
 
 ### Альтернативы
